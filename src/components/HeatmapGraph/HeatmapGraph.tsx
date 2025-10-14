@@ -153,7 +153,6 @@ const HeatmapGraph: React.FC<HeatmapGraphProps> = ({ commits, onDayClick }) => {
           spacing={1}
           justifyContent="center"
           alignItems="center"
-          mt={3}
         >
           <Typography variant="body2">Less</Typography>
           {colorScale.map((color, idx) => (
