@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import HeatmapGraph from './components/HeatmapGraph/HeatmapGraph';
 import CommitForm from './components/CommitForm/CommitForm';
-import DayCommitListModal, { type Commit as CommitType } from './components/DayCommitListModal/DayCommitListModal';
-
-const LOCAL_STORAGE_KEY = 'commits_data';
+import DayCommitListModal, {
+  type Commit as CommitType,
+} from './components/DayCommitListModal/DayCommitListModal';
 
 const App: React.FC = () => {
   const [commits, setCommits] = useState<CommitType[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
 
+  // Ngày hiện tại hiển thị góc trái
   const currentDate = new Date();
   const formattedDate = currentDate.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -19,35 +20,29 @@ const App: React.FC = () => {
     year: 'numeric',
   });
 
-  // Load commits từ localStorage khi mount
-  useEffect(() => {
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (stored) setCommits(JSON.parse(stored));
-  }, []);
-
-  // Lưu commits lên localStorage mỗi khi thay đổi
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(commits));
-  }, [commits]);
-
+  // Thêm commit mới
   const handleAddCommit = (commit: CommitType) => {
     setCommits((prev) => [...prev, commit]);
   };
 
+  // Khi click vào 1 ngày trên heatmap
   const handleDayClick = (date: string) => {
     setSelectedDate(date);
     setModalOpen(true);
   };
 
+  // Đóng modal
   const handleCloseModal = () => {
     setModalOpen(false);
     setSelectedDate('');
   };
 
+  // Lọc commit theo ngày
   const commitsForSelectedDate = commits.filter((c) => c.date === selectedDate);
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 4, mb: 4 }}>
+      {/* Ngày hiện tại (hiển thị góc trái) */}
       <Typography
         variant="body1"
         sx={{
@@ -60,11 +55,14 @@ const App: React.FC = () => {
       >
         {formattedDate}
       </Typography>
-      
+
+      {/* Heatmap hiển thị các ngày có commit */}
       <HeatmapGraph commits={commits} onDayClick={handleDayClick} />
 
+      {/* Form thêm commit mới */}
       <CommitForm onAddCommit={handleAddCommit} />
 
+      {/* Modal chi tiết commit theo ngày */}
       <DayCommitListModal
         open={modalOpen}
         onClose={handleCloseModal}
