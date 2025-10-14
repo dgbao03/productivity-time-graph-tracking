@@ -5,16 +5,12 @@ import {
   TextField,
   Stack,
   Typography,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-
-type Commit = {
-  date: Date;
-  message: string;
-  hours: number;
-  minutes: number;
-};
+import type { Commit } from '../../types/commit';
 
 type CommitFormProps = {
   onAddCommit: (commit: Commit) => void;
@@ -26,31 +22,79 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
   const [hours, setHours] = useState<number>(0);
   const [minutes, setMinutes] = useState<number>(0);
 
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [errorHours, setErrorHours] = useState<string>('');
+  const [errorMinutes, setErrorMinutes] = useState<string>('');
+
+  // Snackbar state
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // reset errors
+    setErrorMessage('');
+    setErrorHours('');
+    setErrorMinutes('');
+    let hasError = false;
+
+    // validate message
     if (!message.trim()) {
-      alert('Task name is required!');
-      return;
+      setErrorMessage('Task name is required!');
+      hasError = true;
     }
 
-    if (hours < 0 || hours > 24 || minutes < 0 || minutes >= 60) {
-      alert('Invalid hours or minutes');
-      return;
+    if (hours < 0) {
+      setErrorHours('Hours cannot be negative');
+      hasError = true;
     }
 
-    onAddCommit({
-      date: date!,
+    if (minutes < 0) {
+      setErrorMinutes('Minutes cannot be negative');
+      hasError = true;
+    }
+
+    // chuẩn hóa thời gian
+    const totalMinutes = hours * 60 + minutes;
+    if (totalMinutes === 0) {
+      setErrorHours('Time spent must be greater than 0');
+      setErrorMinutes('Time spent must be greater than 0');
+      hasError = true;
+    }
+
+    const normalizedHours = Math.floor(totalMinutes / 60);
+    const normalizedMinutes = totalMinutes % 60;
+
+    if (normalizedHours > 24 || (normalizedHours === 24 && normalizedMinutes > 0)) {
+      setErrorHours('Total time cannot exceed 24 hours');
+      setErrorMinutes('Total time cannot exceed 24 hours');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    // thời điểm commit thực tế
+    const now = new Date();
+    const commitTime = `${now.getHours().toString().padStart(2, '0')}:${now
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}`;
+
+    const commit: Commit = {
+      date: date!.toISOString().slice(0, 10),
       message: message.trim(),
-      hours,
-      minutes,
-    });
+      hours: normalizedHours,
+      minutes: normalizedMinutes,
+      time: commitTime,
+    };
 
-    // reset form
+    onAddCommit(commit);
+
+    // ✅ Chỉ reset message, giữ nguyên date/hours/minutes để thuận tiện nhập nhiều task trong cùng ngày
     setMessage('');
-    setHours(0);
-    setMinutes(0);
-    setDate(new Date());
+
+    // hiển thị snackbar
+    setOpenSnackbar(true);
   };
 
   return (
@@ -60,7 +104,7 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
         onSubmit={handleSubmit}
         sx={{
           p: 4,
-          bgcolor: '#f9f9f9', // nền sáng, hợp gu với heatmap
+          bgcolor: '#f9f9f9',
           borderRadius: 3,
           boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
           maxWidth: 500,
@@ -68,7 +112,6 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
           mt: 6,
         }}
       >
-        {/* Title */}
         <Typography
           variant="h5"
           align="center"
@@ -78,14 +121,13 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
             fontWeight: 600,
             letterSpacing: '0.5px',
             mb: 4,
-            color: '#1f2937', // dark gray, hài hòa với heatmap
           }}
         >
           Add Commit
         </Typography>
 
         <Stack spacing={3}>
-          {/* Date */}
+          {/* Date Picker */}
           <DatePicker
             label="Date"
             value={date}
@@ -93,16 +135,17 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
             slotProps={{ textField: { fullWidth: true } }}
           />
 
-          {/* Task name */}
+          {/* Commit Message */}
           <TextField
-            label="Task Name"
+            label="Commit Message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             fullWidth
-            required
+            error={!!errorMessage}
+            helperText={errorMessage}
           />
 
-          {/* Hours and minutes */}
+          {/* Hours & Minutes (time spent on task) */}
           <Stack direction="row" spacing={2}>
             <TextField
               label="Hours"
@@ -111,22 +154,26 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
               onChange={(e) => setHours(Number(e.target.value))}
               inputProps={{ min: 0, max: 24 }}
               fullWidth
+              error={!!errorHours}
+              helperText={errorHours}
             />
             <TextField
               label="Minutes"
               type="number"
               value={minutes}
               onChange={(e) => setMinutes(Number(e.target.value))}
-              inputProps={{ min: 0, max: 59 }}
+              inputProps={{ min: 0 }}
               fullWidth
+              error={!!errorMinutes}
+              helperText={errorMinutes}
             />
           </Stack>
 
           <Button
-            variant="contained"
             type="submit"
+            variant="contained"
             sx={{
-              bgcolor: '#40c463', // màu xanh của heatmap
+              bgcolor: '#40c463',
               '&:hover': { bgcolor: '#30a14e' },
               fontWeight: 600,
             }}
@@ -134,6 +181,28 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
             Add
           </Button>
         </Stack>
+
+        {/* Snackbar */}
+        <Snackbar
+          open={openSnackbar}
+          autoHideDuration={3000}
+          onClose={() => setOpenSnackbar(false)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        >
+          <Alert
+            onClose={() => setOpenSnackbar(false)}
+            severity="success"
+            sx={{
+              width: '100%',
+              bgcolor: '#40c463',
+              color: '#fff',
+              fontWeight: 600,
+              fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
+            }}
+          >
+            Commit successfully!
+          </Alert>
+        </Snackbar>
       </Box>
     </LocalizationProvider>
   );
