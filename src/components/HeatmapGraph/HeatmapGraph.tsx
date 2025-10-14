@@ -3,12 +3,19 @@ import CalendarHeatmap from 'react-calendar-heatmap';
 import { Box, Typography, Stack, Tooltip as MuiTooltip } from '@mui/material';
 import 'react-calendar-heatmap/dist/styles.css';
 
+export type Commit = {
+  date: string; // 'YYYY-MM-DD'
+  message: string;
+  hours: number;
+  minutes: number;
+};
+
 // Năm hiện tại
 const currentYear = new Date().getFullYear();
 const startOfYear = new Date(currentYear, 0, 0); // 1 Jan
 const endOfYear = new Date(currentYear, 11, 31); // 31 Dec
 
-// Dữ liệu demo 0-4 commit/ngày (bao trọn 01/01 → 31/12, tránh lệch múi giờ)
+// format date
 const formatDateLocal = (d: Date) => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -16,36 +23,46 @@ const formatDateLocal = (d: Date) => {
   return `${y}-${m}-${day}`;
 };
 
-const sampleValues: HeatmapValue[] = (() => {
-  const values: HeatmapValue[] = [];
-  const d = new Date(startOfYear);
-  while (d <= endOfYear) {
-    const count = Math.floor(Math.random() * 5);
-    values.push({ date: formatDateLocal(d), count });
-    d.setDate(d.getDate() + 1);
-  }
-  return values;
-})();
-
-// Màu GitHub-like
+// màu GitHub-like
 const colorScale = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39'];
 
-type HeatmapValue = { date: string; count: number };
+type HeatmapValue = { date: string; totalMinutes: number };
 
 type HeatmapGraphProps = {
-    onDayClick?: (date: string) => void; // thêm prop kiểu function
-  };
-
-const getColor = (value: HeatmapValue | null) => {
-  if (!value) return colorScale[0];
-  if (value.count === 0) return colorScale[0];
-  if (value.count === 1) return colorScale[1];
-  if (value.count === 2) return colorScale[2];
-  if (value.count === 3) return colorScale[3];
-  return colorScale[4];
+  commits: Commit[];
+  onDayClick?: (date: string) => void;
 };
 
-const HeatmapGraph: React.FC<HeatmapGraphProps> = ({ onDayClick }) => {
+const getColor = (value: HeatmapValue | null) => {
+  if (!value || value.totalMinutes === 0) return colorScale[0];
+  const t = value.totalMinutes;
+  if (t <= 60) return colorScale[1];       // 1h
+  if (t <= 120) return colorScale[2];      // 2h
+  if (t <= 240) return colorScale[3];      // 4h
+  return colorScale[4];                     // >4h
+};
+
+const HeatmapGraph: React.FC<HeatmapGraphProps> = ({ commits, onDayClick }) => {
+  // Build values từ commits thực tế
+  const buildHeatmapValues = (): HeatmapValue[] => {
+    const values: HeatmapValue[] = [];
+    const d = new Date(startOfYear);
+    while (d <= endOfYear) {
+      const dateStr = formatDateLocal(d);
+      const dailyCommits = commits.filter(c => c.date === dateStr);
+      // tính tổng số phút trong ngày
+      const totalMinutes = dailyCommits.reduce(
+        (sum, c) => sum + c.hours * 60 + c.minutes,
+        0
+      );
+      values.push({ date: dateStr, totalMinutes });
+      d.setDate(d.getDate() + 1);
+    }
+    return values;
+  };
+
+  const values = buildHeatmapValues();
+
   return (
     <Box
       sx={{
@@ -67,39 +84,54 @@ const HeatmapGraph: React.FC<HeatmapGraphProps> = ({ onDayClick }) => {
       >
         {/* Title */}
         <Typography
-            variant="h5"
-            align="center"
-            gutterBottom
-            sx={{
-                fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
-                fontWeight: 600,
-                letterSpacing: '0.5px',
-                mb: 4   
-            }}
-            >
-            Commit Heatmap - {currentYear}
+          variant="h5"
+          align="center"
+          gutterBottom
+          sx={{
+            fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
+            fontWeight: 600,
+            letterSpacing: '0.5px',
+            mb: 4,
+          }}
+        >
+          Commit Heatmap - {currentYear}
         </Typography>
 
-
         {/* Heatmap */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', overflowX: 'auto' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', overflowX: 'auto',
+          '& .react-calendar-heatmap-weekday-label': {
+            textAnchor: 'end',     
+            transform: 'translateX(10px)', 
+          },
+          '& .react-calendar-heatmap-month-label': {
+            transform: 'translateY(-3px)', 
+          },
+         }}>
           <CalendarHeatmap
             startDate={startOfYear}
             endDate={endOfYear}
-            values={sampleValues}
-            gutterSize={2} 
-            rectSize={22}  
+            values={values}
+            gutterSize={2}
+            rectSize={22}
             classForValue={(_: HeatmapValue | null) => ''}
             showWeekdayLabels
             showMonthLabels
             transformDayElement={(
               rect: React.ReactElement<React.SVGProps<SVGRectElement>>,
               value: HeatmapValue | null,
-              index: number,
+              index: number
             ) => (
               <MuiTooltip
                 key={index}
-                title={value ? `${value.date}: ${value.count} commit(s)` : 'No commits'}
+                title={
+                  value
+                    ? `${new Date(value.date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}: ${Math.floor(value.totalMinutes / 60)}h ${value.totalMinutes % 60}m`
+                    : 'No commits'
+                }
                 arrow
                 placement="top"
               >
