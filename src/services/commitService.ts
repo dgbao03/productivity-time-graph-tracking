@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:8080/api/commits';
+const API_BASE = 'https://workheat-backend-production.up.railway.app/api/commits';
 
 export type CommitResponse = {
   id: string;
