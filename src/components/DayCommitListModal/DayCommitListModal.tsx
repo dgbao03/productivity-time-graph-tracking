@@ -17,6 +17,7 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  CircularProgress, // Thêm CircularProgress để hiển thị loading
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -36,7 +37,7 @@ type DayCommitListModalProps = {
   open: boolean;
   onClose: () => void;
   date: string;
-  commits: Commit[];
+  commits: Commit[]; // Lưu ý: Tham số này không được sử dụng trong component này
   onDeleteCommitSuccess?: () => void;
 };
 
@@ -48,6 +49,8 @@ const DayCommitListModal: React.FC<DayCommitListModalProps> = ({
 }) => {
   const [commits, setCommits] = useState<Commit[]>([]);
   const [totalMinutes, setTotalMinutes] = useState(0);
+  // 💡 Bổ sung state để quản lý trạng thái loading
+  const [isLoading, setIsLoading] = useState(false);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedCommit, setSelectedCommit] = useState<Commit | null>(null);
@@ -58,6 +61,10 @@ const DayCommitListModal: React.FC<DayCommitListModalProps> = ({
 
   useEffect(() => {
     if (!open || !date) return;
+
+    // 💡 Bước 1: Reset dữ liệu cũ và bắt đầu trạng thái loading
+    setCommits([]); // Xóa dữ liệu cũ ngay lập tức
+    setIsLoading(true);
 
     const fetchCommits = async () => {
       try {
@@ -82,6 +89,9 @@ const DayCommitListModal: React.FC<DayCommitListModalProps> = ({
         setSnackbarMessage('Failed to load commits for this day! Please try again.');
         setSnackbarSeverity('error');
         setSnackbarOpen(true);
+      } finally {
+        // 💡 Bước 2: Dừng loading sau khi fetch xong (thành công hoặc thất bại)
+        setIsLoading(false);
       }
     };
 
@@ -128,6 +138,106 @@ const DayCommitListModal: React.FC<DayCommitListModalProps> = ({
     }
   };
 
+  const renderContent = () => {
+    // 💡 Hiển thị loading khi đang tải dữ liệu
+    if (isLoading) {
+      return (
+        <Box display="flex" justifyContent="center" alignItems="center" height={200}>
+          <CircularProgress color="primary" />
+        </Box>
+      );
+    }
+
+    // Hiển thị không có commit
+    if (commits.length === 0) {
+      return (
+        <Typography
+          variant="body1"
+          align="center"
+          sx={{
+            fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
+            color: 'text.secondary',
+            py: 4, // Thêm padding để nội dung rõ ràng hơn
+          }}
+        >
+          No commits for this day.
+        </Typography>
+      );
+    }
+
+    // Hiển thị danh sách commit
+    return (
+      <>
+        <Box sx={{ mb: 2 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
+              color: 'text.secondary',
+            }}
+          >
+            Total Time: {totalHours}h {remainingMinutes}m
+          </Typography>
+          {isOver24h && (
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'error.main',
+                fontWeight: 600,
+                mt: 0.5,
+                fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
+              }}
+            >
+              Oops, looks like we’re over 24 hours for a day. Try adjusting a little.
+            </Typography>
+          )}
+        </Box>
+
+        <TableContainer
+          component={Paper}
+          sx={{
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            maxHeight: 400,
+            overflowY: 'auto',
+            borderRadius: 2,
+          }}
+        >
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow sx={{ bgcolor: '#e6f4ea' }}>
+                <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 600 }}>Duration</TableCell>
+                <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 600 }}>Task</TableCell>
+                <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 600 }}>Commit Time</TableCell>
+                <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 600, width: 50 }} />
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {commits.map((commit, idx) => (
+                <TableRow key={commit.id || idx} hover>
+                  <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 500, fontSize: 14, color: '#333' }}>
+                    {commit.hours.toString().padStart(2, '0')}:{commit.minutes.toString().padStart(2, '0')}
+                  </TableCell>
+                  <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 500, fontSize: 14, color: '#333' }}>
+                    {commit.message}
+                  </TableCell>
+                  <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 500, fontSize: 14, color: '#333' }}>
+                    {commit.time || '--:--'}
+                  </TableCell>
+                  <TableCell>
+                    <IconButton size="small" color="error" onClick={() => handleOpenDeleteDialog(commit)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </>
+    );
+  };
+
+
   return (
     <>
       <Modal open={open} onClose={onClose} aria-labelledby="day-commit-list-modal">
@@ -162,86 +272,9 @@ const DayCommitListModal: React.FC<DayCommitListModalProps> = ({
             </IconButton>
           </Stack>
 
-          {commits.length > 0 && (
-            <Box sx={{ mb: 2 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
-                  color: 'text.secondary',
-                }}
-              >
-                Total Time: {totalHours}h {remainingMinutes}m
-              </Typography>
-              {isOver24h && (
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: 'error.main',
-                    fontWeight: 600,
-                    mt: 0.5,
-                    fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
-                  }}
-                >
-                  Oops, looks like we’re over 24 hours for a day. Try adjusting a little.
-                </Typography>
-              )}
-            </Box>
-          )}
+          {/* 💡 Sử dụng hàm renderContent đã chỉnh sửa */}
+          {renderContent()}
 
-          {commits.length === 0 ? (
-            <Typography
-              variant="body1"
-              align="center"
-              sx={{
-                fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
-                color: 'text.secondary',
-              }}
-            >
-              No commits for this day.
-            </Typography>
-          ) : (
-            <TableContainer
-              component={Paper}
-              sx={{
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                maxHeight: 400,
-                overflowY: 'auto',
-                borderRadius: 2,
-              }}
-            >
-              <Table stickyHeader>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: '#e6f4ea' }}>
-                    <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 600 }}>Duration</TableCell>
-                    <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 600 }}>Task</TableCell>
-                    <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 600 }}>Commit Time</TableCell>
-                    <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 600, width: 50 }} />
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {commits.map((commit, idx) => (
-                    <TableRow key={idx} hover>
-                      <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 500, fontSize: 14, color: '#333' }}>
-                        {commit.hours.toString().padStart(2, '0')}:{commit.minutes.toString().padStart(2, '0')}
-                      </TableCell>
-                      <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 500, fontSize: 14, color: '#333' }}>
-                        {commit.message}
-                      </TableCell>
-                      <TableCell sx={{ fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif', fontWeight: 500, fontSize: 14, color: '#333' }}>
-                        {commit.time || '--:--'}
-                      </TableCell>
-                      <TableCell>
-                        <IconButton size="small" color="error" onClick={() => handleOpenDeleteDialog(commit)}>
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
         </Box>
       </Modal>
 
