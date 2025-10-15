@@ -17,7 +17,7 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  CircularProgress, // Thêm CircularProgress để hiển thị loading
+  CircularProgress
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -37,7 +37,7 @@ type DayCommitListModalProps = {
   open: boolean;
   onClose: () => void;
   date: string;
-  commits: Commit[]; // Lưu ý: Tham số này không được sử dụng trong component này
+  commits: Commit[];
   onDeleteCommitSuccess?: () => void;
 };
 
@@ -49,7 +49,7 @@ const DayCommitListModal: React.FC<DayCommitListModalProps> = ({
 }) => {
   const [commits, setCommits] = useState<Commit[]>([]);
   const [totalMinutes, setTotalMinutes] = useState(0);
-  // 💡 Bổ sung state để quản lý trạng thái loading
+  
   const [isLoading, setIsLoading] = useState(false);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -62,8 +62,7 @@ const DayCommitListModal: React.FC<DayCommitListModalProps> = ({
   useEffect(() => {
     if (!open || !date) return;
 
-    // 💡 Bước 1: Reset dữ liệu cũ và bắt đầu trạng thái loading
-    setCommits([]); // Xóa dữ liệu cũ ngay lập tức
+    setCommits([]);
     setIsLoading(true);
 
     const fetchCommits = async () => {
@@ -90,7 +89,6 @@ const DayCommitListModal: React.FC<DayCommitListModalProps> = ({
         setSnackbarSeverity('error');
         setSnackbarOpen(true);
       } finally {
-        // 💡 Bước 2: Dừng loading sau khi fetch xong (thành công hoặc thất bại)
         setIsLoading(false);
       }
     };
@@ -139,7 +137,6 @@ const DayCommitListModal: React.FC<DayCommitListModalProps> = ({
   };
 
   const renderContent = () => {
-    // 💡 Hiển thị loading khi đang tải dữ liệu
     if (isLoading) {
       return (
         <Box display="flex" justifyContent="center" alignItems="center" height={200}>
@@ -148,7 +145,6 @@ const DayCommitListModal: React.FC<DayCommitListModalProps> = ({
       );
     }
 
-    // Hiển thị không có commit
     if (commits.length === 0) {
       return (
         <Typography
@@ -157,7 +153,7 @@ const DayCommitListModal: React.FC<DayCommitListModalProps> = ({
           sx={{
             fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
             color: 'text.secondary',
-            py: 4, // Thêm padding để nội dung rõ ràng hơn
+            py: 4, 
           }}
         >
           No commits for this day.
@@ -165,7 +161,6 @@ const DayCommitListModal: React.FC<DayCommitListModalProps> = ({
       );
     }
 
-    // Hiển thị danh sách commit
     return (
       <>
         <Box sx={{ mb: 2 }}>
@@ -272,7 +267,6 @@ const DayCommitListModal: React.FC<DayCommitListModalProps> = ({
             </IconButton>
           </Stack>
 
-          {/* 💡 Sử dụng hàm renderContent đã chỉnh sửa */}
           {renderContent()}
 
         </Box>
