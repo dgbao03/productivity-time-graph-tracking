@@ -4,16 +4,15 @@ import {
   Button,
   TextField,
   Stack,
-  Typography,
-  Snackbar,
-  Alert,
+  Typography
 } from '@mui/material';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import type { Commit } from '../../types/commit';
+import { commitApi } from '../../services/commitService';
+import AppSnackbar from '../Common/AppSnackBar'
 
 type CommitFormProps = {
-  onAddCommit: (commit: Commit) => void;
+  onAddCommit: () => void;
 };
 
 const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
@@ -26,19 +25,18 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
   const [errorHours, setErrorHours] = useState<string>('');
   const [errorMinutes, setErrorMinutes] = useState<string>('');
 
-  // Snackbar state
-  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'error' | 'success'>('success');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // reset errors
     setErrorMessage('');
     setErrorHours('');
     setErrorMinutes('');
     let hasError = false;
 
-    // validate message
     if (!message.trim()) {
       setErrorMessage('Task name is required!');
       hasError = true;
@@ -54,7 +52,6 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
       hasError = true;
     }
 
-    // chuẩn hóa thời gian
     const totalMinutes = hours * 60 + minutes;
     if (totalMinutes === 0) {
       setErrorHours('Time spent must be greater than 0');
@@ -73,28 +70,27 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
 
     if (hasError) return;
 
-    // thời điểm commit thực tế
-    const now = new Date();
-    const commitTime = `${now.getHours().toString().padStart(2, '0')}:${now
-      .getMinutes()
-      .toString()
-      .padStart(2, '0')}`;
+    try {
+      await commitApi.addCommit({
+        date: date!.toISOString().slice(0, 10),
+        message: message.trim(),
+        hours: normalizedHours,
+        minutes: normalizedMinutes,
+      });
 
-    const commit: Commit = {
-      date: date!.toISOString().slice(0, 10),
-      message: message.trim(),
-      hours: normalizedHours,
-      minutes: normalizedMinutes,
-      time: commitTime,
-    };
+      onAddCommit();
 
-    onAddCommit(commit);
+      setMessage('');
 
-    // ✅ Chỉ reset message, giữ nguyên date/hours/minutes để thuận tiện nhập nhiều task trong cùng ngày
-    setMessage('');
+      setSnackbarMessage('Commit successfully!');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
 
-    // hiển thị snackbar
-    setOpenSnackbar(true);
+    } catch (err) {
+      setSnackbarMessage('Failed to add commit! Please try again.');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    }
   };
 
   return (
@@ -127,7 +123,6 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
         </Typography>
 
         <Stack spacing={3}>
-          {/* Date Picker */}
           <DatePicker
             label="Date"
             value={date}
@@ -135,7 +130,6 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
             slotProps={{ textField: { fullWidth: true } }}
           />
 
-          {/* Commit Message */}
           <TextField
             label="Commit Message"
             value={message}
@@ -145,7 +139,6 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
             helperText={errorMessage}
           />
 
-          {/* Hours & Minutes (time spent on task) */}
           <Stack direction="row" spacing={2}>
             <TextField
               label="Hours"
@@ -182,27 +175,12 @@ const CommitForm: React.FC<CommitFormProps> = ({ onAddCommit }) => {
           </Button>
         </Stack>
 
-        {/* Snackbar */}
-        <Snackbar
-          open={openSnackbar}
-          autoHideDuration={3000}
-          onClose={() => setOpenSnackbar(false)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        >
-          <Alert
-            onClose={() => setOpenSnackbar(false)}
-            severity="success"
-            sx={{
-              width: '100%',
-              bgcolor: '#40c463',
-              color: '#fff',
-              fontWeight: 600,
-              fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
-            }}
-          >
-            Commit successfully!
-          </Alert>
-        </Snackbar>
+        <AppSnackbar
+          open={snackbarOpen}
+          onClose={() => setSnackbarOpen(false)}
+          message={snackbarMessage}
+          severity={snackbarSeverity}
+        />
       </Box>
     </LocalizationProvider>
   );
