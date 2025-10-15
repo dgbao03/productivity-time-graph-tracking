@@ -12,52 +12,56 @@
 
 - WorkHeat is a modern web application designed to visualize your daily work progress using a GitHub-style heatmap. It allows you to log, view, and analyze the time you spend working or studying each day.
 
-- This repository hosts the frontend part of the project, built with React, TypeScript, and Material UI (MUI). It connects to a robust RESTful backend API developed using Spring Boot and PostgreSQL.
+- This repository hosts the frontend part of the project, built with React, TypeScript, and Material UI (MUI). It connects to a robust RESTful API developed using Spring Boot and PostgreSQL.
 
 - The core idea of WorkHeat:
 
-    1. A "commit" corresponds to a specific period of time dedicated to a task (including the total time spent and a description).
+    - A "commit" corresponds to a specific period of time dedicated to a task (including the total time spent and a description).
 
-    2. Progress and time are visually tracked through a GitHub-alike contribution map.
+    - Progress and time are visually tracked through a GitHub-alike contribution map.
 
-    3. Each cell on the map represents a day, showing the total time spent learning/working and the individual "commits" made that day.
+    - Each cell on the map represents a day, showing the total time spent learning/working and the individual "commits" made that day.
 
-    Essentially, it's a contribution graph, but instead of tracking code pushes, it tracks dedicated study/work time.
+- Essentially, it's a contribution graph, but instead of tracking code pushes, it tracks dedicated study/work time.
 
 ## Features
 
-- Log Tasks/Commits: Easily add new tasks or "commits" with a custom date and the time spent on them.
+- **Log Tasks/Commits**: Easily add new tasks or "commits" with a custom date and the time spent on them.
 
-- Visualize Intensity: A GitHub-like heatmap clearly shows your daily working intensity.
+- **Visualize Intensity**: A GitHub-like heatmap clearly shows your daily working intensity.
 
-- Detailed View: View the specific commits (tasks) you completed on any given day.
+- **Detailed View**: View the specific commits (tasks) you completed on any given day.
 
-- Commit Management: Functionality to remove a previously logged commit.
+- **Commit Management**: Functionality to remove a previously logged commit.
 
-- Responsive Design: Optimized for seamless use on both desktop and mobile devices. 
+- **Responsive Design**: Optimized for seamless use on both desktop and mobile devices. 
 
 
 ## Tech Stack
 
-- Frontend: React (with Vite)
+- **Frontend**: React (with Vite)
 
-- Language: TypeScript
+- **Language**: TypeScript
 
-- UI Library: Material UI (MUI)
+- **UI Library**: Material UI (MUI)
 
 ## Running the Application
 
-- **Note**: My public backend API deployed on Railway is used for demonstration and might expire. If the public API doesn't work, you can clone the WorkHeat backend project from the following link: [insert backend link here] and modify the API endpoint to your local address (localhost) to use it.
+- **Note**: Public backend API deployed on Railway is used for demonstration and might expire. If the public API doesn't work, you can clone the WorkHeat backend project from the following link and modify the API endpoint in ``src/services/commitService.ts`` to local address (localhost) to use it.
 
-1. Clone this repository.
+```
+https://github.com/dgbao03/workheat-backend
+```
 
-2. Install dependencies:
+1. **Clone this repository**
+
+2. **Install dependencies**
 
 ```
 npm install
 ```
 
-3. Start the development server:
+3. **Start the development server**
 
 ```
 npm run dev
